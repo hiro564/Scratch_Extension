@@ -118,6 +118,11 @@
             opcode: 'getMapUrl',
             blockType: Scratch.BlockType.REPORTER,
             text: '現在の地図のURL'
+          },
+          {
+            opcode: 'openMap',
+            blockType: Scratch.BlockType.COMMAND,
+            text: 'ブラウザで地図を開く'
           }
         ]
       };
@@ -189,10 +194,16 @@
       return Math.round(bearing * 10) / 10;
     }
 
-    getMapUrl() {
-      return 'https://www.openstreetmap.org/#map=' + this.currentZoom + '/' + this.centerLatitude + '/' + this.centerLongitude;
-    }
-  }
+ getMapUrl() {
+  return 'https://www.openstreetmap.org/#map=16/' + 
+         this.centerLatitude + '/' + 
+         this.centerLongitude;
+}
+
+openMap() {
+  var url = this.getMapUrl();
+  window.open(url, '_blank');
+}
 
   Scratch.extensions.register(new OpenStreetMapExtension());
 })(Scratch);
