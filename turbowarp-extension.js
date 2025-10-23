@@ -264,37 +264,3 @@
 
   Scratch.extensions.register(new OpenStreetMapExtension());
 })(Scratch);
-```
-
-### ステップ5: コミット
-
-1. 下にスクロール
-2. Commit message: `Add TurboWarp compatible version`
-3. **「Commit new file」**をクリック
-
-### ステップ6: 完了！
-
-数分待ってから、このURLで使えます：
-```
-https://turbowarp.org/editor?extension=https://hiro564.github.io/scratch_extension/turbowarp-extension.js
-```
-
----
-
-## 🎥 手順の流れ（画像で説明）
-
-1. リポジトリトップ → **Add file** → **Create new file**
-2. ファイル名: `turbowarp-extension.js`
-3. 上記のコード全体をコピペ
-4. **Commit new file** をクリック
-5. 完了！
-
----
-
-## ✅ 動作確認
-
-1. GitHub Pagesが有効か確認（Settings → Pages）
-2. 数分待つ
-3. このURLを開く：
-```
-   https://turbowarp.org/editor?extension=https://hiro564.github.io/scratch_extension/turbowarp-extension.js
