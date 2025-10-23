@@ -1,0 +1,33 @@
+{
+  "name": "scratch-vm-openstreetmap",
+  "version": "1.0.0",
+  "description": "OpenStreetMap extension blocks for Scratch VM / Scratch VM用OpenStreetMap拡張ブロック",
+  "main": "index.js",
+  "author": "hiro564",
+  "license": "GPL-3.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hiro564/scratch_extension.git"
+  },
+  "keywords": [
+    "scratch",
+    "scratch-vm",
+    "turbowarp",
+    "openstreetmap",
+    "osm",
+    "maps",
+    "extension",
+    "blocks"
+  ],
+  "scripts": {
+    "test": "echo \"No tests yet\" && exit 0"
+  },
+  "peerDependencies": {
+    "scratch-vm": "^2.0.0"
+  },
+  "dependencies": {},
+  "devDependencies": {},
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}
