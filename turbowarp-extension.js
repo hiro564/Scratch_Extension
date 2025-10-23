@@ -1,114 +1,17 @@
 (function(Scratch) {
   'use strict';
 
-  // TileCache クラス
-  class TileCache {
-    constructor() {
-      this.cache = new Map();
-      this.maxSize = 200;
-      this.baseUrl = 'https://cartodb-basemaps-a.global.ssl.fastly.net/light_all/{z}/{x}/{y}.png';
-    }
-
-    getTileKey(zoom, x, y) {
-      return `${zoom}_${x}_${y}`;
-    }
-
-    async getImage(zoom, x, y) {
-      const key = this.getTileKey(zoom, x, y);
-      
-      if (this.cache.has(key)) {
-        const cachedImage = this.cache.get(key);
-        if (cachedImage.complete) {
-          return cachedImage;
-        }
-      }
-
-      try {
-        const url = this.getTileUrl(zoom, x, y);
-        const image = await this.loadImage(url);
-        
-        this.cache.set(key, image);
-        this.manageCacheSize();
-        
-        return image;
-      } catch (error) {
-        console.error(`Failed to load tile: ${key}`, error);
-        
-        try {
-          const fallbackUrl = `https://tile.openstreetmap.org/${zoom}/${x}/${y}.png`;
-          const fallbackImage = await this.loadImage(fallbackUrl);
-          this.cache.set(key, fallbackImage);
-          this.manageCacheSize();
-          return fallbackImage;
-        } catch (fallbackError) {
-          console.error(`Fallback tile also failed: ${key}`, fallbackError);
-          return null;
-        }
-      }
-    }
-
-    getTileUrl(zoom, x, y) {
-      return this.baseUrl
-        .replace('{z}', zoom)
-        .replace('{x}', x)
-        .replace('{y}', y);
-    }
-
-    loadImage(url) {
-      return new Promise((resolve, reject) => {
-        const image = new Image();
-        image.crossOrigin = 'anonymous';
-        
-        image.onload = () => resolve(image);
-        image.onerror = (error) => reject(error);
-        
-        setTimeout(() => {
-          if (!image.complete) {
-            reject(new Error('Image load timeout'));
-          }
-        }, 10000);
-        
-        image.src = url;
-      });
-    }
-
-    manageCacheSize() {
-      if (this.cache.size > this.maxSize) {
-        const keysToDelete = Array.from(this.cache.keys()).slice(0, this.cache.size - this.maxSize);
-        keysToDelete.forEach(key => this.cache.delete(key));
-      }
-    }
-
-    clearCache() {
-      this.cache.clear();
-    }
-  }
-
-  // TileMap クラス（簡略版）
-  class TileMap {
-    constructor() {
-      this.centerLongitude = 139.691648;
-      this.centerLatitude = 35.689185;
-      this.currentZoom = 16;
-    }
-
-    latLonToPixel(lat, lon, zoom) {
-      const TILE_SIZE = 256;
-      const scale = Math.pow(2, zoom);
-      const x = (lon + 180) / 360 * scale * TILE_SIZE;
-      const y = (1 - Math.log(Math.tan(lat * Math.PI / 180) + 
-        1 / Math.cos(lat * Math.PI / 180)) / Math.PI) / 2 * scale * TILE_SIZE;
-      
-      return { x: x, y: y };
-    }
+  if (!Scratch.extensions.unsandboxed) {
+    throw new Error('この拡張機能はサンドボックス化されていない環境で実行する必要があります');
   }
 
   // メイン拡張機能クラス
   class OpenStreetMapExtension {
     constructor(runtime) {
       this.runtime = runtime;
-      this.tileCache = new TileCache();
-      this.tileMap = new TileMap();
+      this.centerLongitude = 139.691648;
+      this.centerLatitude = 35.689185;
+      this.currentZoom = 16;
     }
 
     getInfo() {
@@ -117,11 +20,12 @@
         name: 'OpenStreetMap',
         color1: '#4CAF50',
         color2: '#388E3C',
+        color3: '#2E7D32',
         blocks: [
           {
             opcode: 'drawTileMapByAddress',
             blockType: Scratch.BlockType.COMMAND,
-            text: '住所 [ADDRESS] の地図をズームレベル [ZOOM] で表示',
+            text: '住所 [ADDRESS] の地図を中心にする（ズーム [ZOOM]）',
             arguments: {
               ADDRESS: {
                 type: Scratch.ArgumentType.STRING,
@@ -134,9 +38,9 @@
             }
           },
           {
-            opcode: 'drawTileMap',
+            opcode: 'setMapCenter',
             blockType: Scratch.BlockType.COMMAND,
-            text: '緯度[LATITUDE] 経度[LONGITUDE] の地図をズームレベル [ZOOM] で表示',
+            text: '地図の中心を緯度 [LATITUDE] 経度 [LONGITUDE] にする',
             arguments: {
               LATITUDE: {
                 type: Scratch.ArgumentType.NUMBER,
@@ -145,27 +49,41 @@
               LONGITUDE: {
                 type: Scratch.ArgumentType.NUMBER,
                 defaultValue: 139.7454
-              },
+              }
+            }
+          },
+          {
+            opcode: 'setZoom',
+            blockType: Scratch.BlockType.COMMAND,
+            text: 'ズームレベルを [ZOOM] にする',
+            arguments: {
               ZOOM: {
                 type: Scratch.ArgumentType.NUMBER,
                 defaultValue: 16
               }
             }
           },
+          '---',
           {
             opcode: 'getCurrentLatitude',
             blockType: Scratch.BlockType.REPORTER,
-            text: 'スプライトがいる場所の緯度'
+            text: '地図の中心の緯度'
           },
           {
             opcode: 'getCurrentLongitude',
             blockType: Scratch.BlockType.REPORTER,
-            text: 'スプライトがいる場所の経度'
+            text: '地図の中心の経度'
           },
+          {
+            opcode: 'getCurrentZoom',
+            blockType: Scratch.BlockType.REPORTER,
+            text: '現在のズームレベル'
+          },
+          '---',
           {
             opcode: 'calculateDistanceBetweenPoints',
             blockType: Scratch.BlockType.REPORTER,
-            text: '緯度[LAT1]経度[LON1]から緯度[LAT2]経度[LON2]までの距離(m)',
+            text: '緯度[LAT1] 経度[LON1]から緯度[LAT2] 経度[LON2]までの距離(m)',
             arguments: {
               LAT1: {
                 type: Scratch.ArgumentType.NUMBER,
@@ -184,30 +102,72 @@
                 defaultValue: 139.7671
               }
             }
+          },
+          {
+            opcode: 'getDistanceToCoordinate',
+            blockType: Scratch.BlockType.REPORTER,
+            text: '現在地から緯度[LAT] 経度[LON]までの距離(m)',
+            arguments: {
+              LAT: {
+                type: Scratch.ArgumentType.NUMBER,
+                defaultValue: 35.6812
+              },
+              LON: {
+                type: Scratch.ArgumentType.NUMBER,
+                defaultValue: 139.7671
+              }
+            }
+          },
+          '---',
+          {
+            opcode: 'getBearing',
+            blockType: Scratch.BlockType.REPORTER,
+            text: '緯度[LAT1] 経度[LON1]から緯度[LAT2] 経度[LON2]への方角(度)',
+            arguments: {
+              LAT1: {
+                type: Scratch.ArgumentType.NUMBER,
+                defaultValue: 35.6586
+              },
+              LON1: {
+                type: Scratch.ArgumentType.NUMBER,
+                defaultValue: 139.7454
+              },
+              LAT2: {
+                type: Scratch.ArgumentType.NUMBER,
+                defaultValue: 35.6812
+              },
+              LON2: {
+                type: Scratch.ArgumentType.NUMBER,
+                defaultValue: 139.7671
+              }
+            }
+          },
+          {
+            opcode: 'getMapUrl',
+            blockType: Scratch.BlockType.REPORTER,
+            text: '現在の地図のURL'
           }
         ]
       };
     }
 
     drawTileMapByAddress(args) {
-      const address = args.ADDRESS;
-      const zoom = args.ZOOM;
+      const address = Scratch.Cast.toString(args.ADDRESS);
+      const zoom = Scratch.Cast.toNumber(args.ZOOM);
       
       // Nominatim APIで住所を座標に変換
-      const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}`;
+      const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=1`;
       
       return fetch(url)
         .then(response => response.json())
         .then(data => {
           if (data && data.length > 0) {
-            const lat = parseFloat(data[0].lat);
-            const lon = parseFloat(data[0].lon);
-            this.tileMap.centerLatitude = lat;
-            this.tileMap.centerLongitude = lon;
-            this.tileMap.currentZoom = zoom;
-            return this.drawTileMap({ LATITUDE: lat, LONGITUDE: lon, ZOOM: zoom });
+            this.centerLatitude = parseFloat(data[0].lat);
+            this.centerLongitude = parseFloat(data[0].lon);
+            this.currentZoom = zoom;
+            console.log(`地図を設定: ${address} (緯度${this.centerLatitude}, 経度${this.centerLongitude})`);
           } else {
-            console.error('住所が見つかりませんでした');
+            console.error('住所が見つかりませんでした:', address);
           }
         })
         .catch(error => {
@@ -215,37 +175,46 @@
         });
     }
 
-    drawTileMap(args) {
-      const lat = args.LATITUDE;
-      const lon = args.LONGITUDE;
-      const zoom = args.ZOOM;
-      
-      this.tileMap.centerLatitude = lat;
-      this.tileMap.centerLongitude = lon;
-      this.tileMap.currentZoom = zoom;
-      
-      console.log(`地図を表示: 緯度${lat}, 経度${lon}, ズーム${zoom}`);
-      
-      // TODO: 実際の地図描画処理
-      // TurboWarpでは pen 拡張機能を使って描画する必要があります
-      
-      return Promise.resolve();
+    setMapCenter(args) {
+      this.centerLatitude = Scratch.Cast.toNumber(args.LATITUDE);
+      this.centerLongitude = Scratch.Cast.toNumber(args.LONGITUDE);
+      console.log(`地図の中心を設定: 緯度${this.centerLatitude}, 経度${this.centerLongitude}`);
+    }
+
+    setZoom(args) {
+      this.currentZoom = Scratch.Cast.toNumber(args.ZOOM);
+      console.log(`ズームレベルを設定: ${this.currentZoom}`);
     }
 
     getCurrentLatitude() {
-      return this.tileMap.centerLatitude;
+      return this.centerLatitude;
     }
 
     getCurrentLongitude() {
-      return this.tileMap.centerLongitude;
+      return this.centerLongitude;
+    }
+
+    getCurrentZoom() {
+      return this.currentZoom;
     }
 
     calculateDistanceBetweenPoints(args) {
-      const lat1 = args.LAT1;
-      const lon1 = args.LON1;
-      const lat2 = args.LAT2;
-      const lon2 = args.LON2;
+      const lat1 = Scratch.Cast.toNumber(args.LAT1);
+      const lon1 = Scratch.Cast.toNumber(args.LON1);
+      const lat2 = Scratch.Cast.toNumber(args.LAT2);
+      const lon2 = Scratch.Cast.toNumber(args.LON2);
       
+      return this._calculateDistance(lat1, lon1, lat2, lon2);
+    }
+
+    getDistanceToCoordinate(args) {
+      const lat = Scratch.Cast.toNumber(args.LAT);
+      const lon = Scratch.Cast.toNumber(args.LON);
+      
+      return this._calculateDistance(this.centerLatitude, this.centerLongitude, lat, lon);
+    }
+
+    _calculateDistance(lat1, lon1, lat2, lon2) {
       // Haversine公式
       const R = 6371000; // 地球の半径(m)
       const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -259,6 +228,29 @@
       const distance = R * c;
       
       return Math.round(distance);
+    }
+
+    getBearing(args) {
+      const lat1 = Scratch.Cast.toNumber(args.LAT1) * Math.PI / 180;
+      const lon1 = Scratch.Cast.toNumber(args.LON1) * Math.PI / 180;
+      const lat2 = Scratch.Cast.toNumber(args.LAT2) * Math.PI / 180;
+      const lon2 = Scratch.Cast.toNumber(args.LON2) * Math.PI / 180;
+      
+      const dLon = lon2 - lon1;
+      
+      const y = Math.sin(dLon) * Math.cos(lat2);
+      const x = Math.cos(lat1) * Math.sin(lat2) -
+                Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon);
+      
+      let bearing = Math.atan2(y, x) * 180 / Math.PI;
+      bearing = (bearing + 360) % 360; // 0-360度に正規化
+      
+      return Math.round(bearing * 10) / 10; // 小数点1桁
+    }
+
+    getMapUrl() {
+      // OpenStreetMapの地図URLを返す
+      return `https://www.openstreetmap.org/#map=${this.currentZoom}/${this.centerLatitude}/${this.centerLongitude}`;
     }
   }
 
