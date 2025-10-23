@@ -53,6 +53,27 @@
           },
           '---',
           {
+            opcode: 'getNorthLatitude',
+            blockType: Scratch.BlockType.REPORTER,
+            text: '画像範囲の北端の緯度'
+          },
+          {
+            opcode: 'getSouthLatitude',
+            blockType: Scratch.BlockType.REPORTER,
+            text: '画像範囲の南端の緯度'
+          },
+          {
+            opcode: 'getEastLongitude',
+            blockType: Scratch.BlockType.REPORTER,
+            text: '画像範囲の東端の経度'
+          },
+          {
+            opcode: 'getWestLongitude',
+            blockType: Scratch.BlockType.REPORTER,
+            text: '画像範囲の西端の経度'
+          },
+          '---',
+          {
             opcode: 'calculateDistance',
             blockType: Scratch.BlockType.REPORTER,
             text: '緯度[LAT1] 経度[LON1]から緯度[LAT2] 経度[LON2]までの距離(m)',
@@ -138,6 +159,12 @@
                 defaultValue: 16
               }
             }
+          },
+          '---',
+          {
+            opcode: 'getImageBoundsInfo',
+            blockType: Scratch.BlockType.REPORTER,
+            text: '画像範囲の情報'
           }
         ]
       };
@@ -147,6 +174,8 @@
       this.centerLatitude = 35.689185;
       this.centerLongitude = 139.691648;
       this.currentZoom = 16;
+      this.imageWidth = 480;
+      this.imageHeight = 360;
     }
 
     setMapCenter(args) {
@@ -168,6 +197,62 @@
 
     getCurrentZoom() {
       return this.currentZoom;
+    }
+
+    // 画像範囲の計算
+    calculateImageBounds() {
+      var zoom = this.currentZoom;
+      var centerLat = this.centerLatitude;
+      var centerLon = this.centerLongitude;
+      
+      // メートル/ピクセルを計算
+      var metersPerPixel = 156543.03392 * Math.cos(centerLat * Math.PI / 180) / Math.pow(2, zoom);
+      
+      // 画像の半分のサイズ（ピクセル）
+      var halfWidth = this.imageWidth / 2;
+      var halfHeight = this.imageHeight / 2;
+      
+      // 緯度方向の変化（1度の緯度 ≒ 111,000m）
+      var latDelta = (halfHeight * metersPerPixel) / 111000;
+      
+      // 経度方向の変化（緯度によって変わる）
+      var lonDelta = (halfWidth * metersPerPixel) / (111000 * Math.cos(centerLat * Math.PI / 180));
+      
+      return {
+        north: centerLat + latDelta,
+        south: centerLat - latDelta,
+        east: centerLon + lonDelta,
+        west: centerLon - lonDelta
+      };
+    }
+
+    getNorthLatitude() {
+      var bounds = this.calculateImageBounds();
+      return Math.round(bounds.north * 1000000) / 1000000;
+    }
+
+    getSouthLatitude() {
+      var bounds = this.calculateImageBounds();
+      return Math.round(bounds.south * 1000000) / 1000000;
+    }
+
+    getEastLongitude() {
+      var bounds = this.calculateImageBounds();
+      return Math.round(bounds.east * 1000000) / 1000000;
+    }
+
+    getWestLongitude() {
+      var bounds = this.calculateImageBounds();
+      return Math.round(bounds.west * 1000000) / 1000000;
+    }
+
+    getImageBoundsInfo() {
+      var bounds = this.calculateImageBounds();
+      return '北:' + this.getNorthLatitude() + 
+             ' 南:' + this.getSouthLatitude() + 
+             ' 東:' + this.getEastLongitude() + 
+             ' 西:' + this.getWestLongitude() + 
+             ' ズーム:' + this.currentZoom;
     }
 
     calculateDistance(args) {
