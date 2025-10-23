@@ -196,10 +196,3 @@
 
   Scratch.extensions.register(new OpenStreetMapExtension());
 })(Scratch);
-```
-
-4. **Commit changes**
-
-### 新しいURLで試す
-```
-https://turbowarp.org/editor?extension=https://hiro564.github.io/scratch_extension/osm-minimal.js
