@@ -121,9 +121,23 @@
             text: '現在の地図のURL'
           },
           {
-            opcode: 'openMap',
-            blockType: Scratch.BlockType.COMMAND,
-            text: 'ブラウザで地図を開く'
+            opcode: 'getMapUrlForCoordinate',
+            blockType: Scratch.BlockType.REPORTER,
+            text: '緯度[LAT] 経度[LON] ズーム[ZOOM]の地図URL',
+            arguments: {
+              LAT: {
+                type: Scratch.ArgumentType.NUMBER,
+                defaultValue: 35.6586
+              },
+              LON: {
+                type: Scratch.ArgumentType.NUMBER,
+                defaultValue: 139.7454
+              },
+              ZOOM: {
+                type: Scratch.ArgumentType.NUMBER,
+                defaultValue: 16
+              }
+            }
           }
         ]
       };
@@ -202,9 +216,11 @@
              this.centerLongitude;
     }
 
-    openMap() {
-      var url = this.getMapUrl();
-      window.open(url, '_blank');
+    getMapUrlForCoordinate(args) {
+      var lat = Number(args.LAT);
+      var lon = Number(args.LON);
+      var zoom = Number(args.ZOOM);
+      return 'https://www.openstreetmap.org/#map=' + zoom + '/' + lat + '/' + lon;
     }
   }
 
