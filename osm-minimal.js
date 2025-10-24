@@ -35,6 +35,21 @@
               }
             }
           },
+          {
+            opcode: 'moveSpriteToCoordinates',
+            blockType: Scratch.BlockType.COMMAND,
+            text: '緯度を [LATITUDE] 、経度を [LONGITUDE] にする',
+            arguments: {
+              LATITUDE: {
+                type: Scratch.ArgumentType.NUMBER,
+                defaultValue: 35.3251096
+              },
+              LONGITUDE: {
+                type: Scratch.ArgumentType.NUMBER,
+                defaultValue: 139.558511
+              }
+            }
+          },
           '---',
           {
             opcode: 'getCurrentLatitude',
@@ -176,6 +191,8 @@
       this.currentZoom = 16;
       this.imageWidth = 480;
       this.imageHeight = 360;
+      this.spriteLatitude = 35.3251096;
+      this.spriteLongitude = 139.558511;
     }
 
     setMapCenter(args) {
@@ -185,6 +202,38 @@
 
     setZoom(args) {
       this.currentZoom = Number(args.ZOOM);
+    }
+
+    moveSpriteToCoordinates(args, util) {
+      this.spriteLatitude = Number(args.LATITUDE);
+      this.spriteLongitude = Number(args.LONGITUDE);
+      
+      // 緯度経度をスプライトのXY座標に変換
+      const zoom = this.currentZoom;
+      const centerLat = this.centerLatitude;
+      const centerLon = this.centerLongitude;
+      
+      // メートル/ピクセルを計算
+      const metersPerPixel = 156543.03392 * Math.cos(centerLat * Math.PI / 180) / Math.pow(2, zoom);
+      
+      // 緯度の差をピクセルに変換
+      const latDiff = this.spriteLatitude - centerLat;
+      const latMeters = latDiff * 111000;
+      const yPixels = -latMeters / metersPerPixel; // Y軸は反転
+      
+      // 経度の差をピクセルに変換
+      const lonDiff = this.spriteLongitude - centerLon;
+      const lonMeters = lonDiff * (111000 * Math.cos(centerLat * Math.PI / 180));
+      const xPixels = lonMeters / metersPerPixel;
+      
+      // Scratchの座標系に変換（中心が0,0で-240～240、-180～180）
+      const scratchX = xPixels;
+      const scratchY = yPixels;
+      
+      // スプライトの位置を設定
+      if (util && util.target) {
+        util.target.setXY(scratchX, scratchY);
+      }
     }
 
     getCurrentLatitude() {
